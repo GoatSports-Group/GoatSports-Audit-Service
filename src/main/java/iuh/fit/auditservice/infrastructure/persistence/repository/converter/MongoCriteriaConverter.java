@@ -9,6 +9,8 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.regex.Pattern;
 
@@ -84,7 +86,12 @@ public class MongoCriteriaConverter {
 
                 if ("timestamp".equals(fieldPath) && value != null) {
                     try {
-                        value = Instant.parse(value.toString().trim());
+                        String dateStr = value.toString().trim();
+                        try {
+                            value = OffsetDateTime.parse(dateStr).toLocalDateTime();
+                        } catch (Exception e) {
+                            value = LocalDateTime.parse(dateStr);
+                        }
                     } catch (Exception ignored) {
                     }
                 }

@@ -13,12 +13,10 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class ApiLogEvent {
     private String userId;
-    private String method;
-    private String path;
-    private String queryParams;
+    private String action;
+    private String description;
     private String ipAddress;
     private int statusCode;
-    private long duration;
     private LocalDateTime timestamp;
     private String errorMessage;
 }

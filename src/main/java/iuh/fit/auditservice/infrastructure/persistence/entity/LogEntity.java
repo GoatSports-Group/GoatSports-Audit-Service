@@ -9,7 +9,7 @@ import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -25,14 +25,12 @@ public class LogEntity {
     private String logId;
     @Indexed
     private String userId;
-    private String method;
-    private String path;
-    private String queryParams;
+    private String action;
+    private String description;
     private String ipAddress;
     @Indexed
     private int statusCode;
-    private long duration;
     @Indexed
-    private Instant timestamp;
+    private LocalDateTime timestamp;
     private String errorMessage;
 }

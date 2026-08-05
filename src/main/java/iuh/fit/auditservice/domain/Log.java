@@ -2,7 +2,7 @@ package iuh.fit.auditservice.domain;
 
 import lombok.*;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -12,12 +12,10 @@ import java.time.Instant;
 public class Log {
     private String logId;
     private String userId;
-    private String method;
-    private String path;
-    private String queryParams;
+    private String action;
+    private String description;
     private String ipAddress;
     private int statusCode;
-    private long duration;
-    private Instant timestamp;
+    private LocalDateTime timestamp;
     private String errorMessage;
 }
