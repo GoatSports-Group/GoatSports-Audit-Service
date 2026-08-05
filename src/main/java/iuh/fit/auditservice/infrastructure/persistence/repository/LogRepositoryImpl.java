@@ -12,6 +12,7 @@ import iuh.fit.auditservice.infrastructure.persistence.repository.jpa.JpaLogRepo
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
@@ -38,7 +39,7 @@ public class LogRepositoryImpl implements LogRepository {
     public PageResult<Log> findAll(PageFilter filter) {
         int pageNum = Math.max(0, filter.page() - 1);
         int pageSize = filter.size() > 0 ? filter.size() : 10;
-        Pageable pageable = PageRequest.of(pageNum, pageSize);
+        Pageable pageable = PageRequest.of(pageNum, pageSize, Sort.by(Sort.Direction.DESC, "timestamp"));
 
         Query query;
 
