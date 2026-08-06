@@ -16,10 +16,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "audit_logs")
-@CompoundIndex(
-        name = "user_time_idx",
-        def = "{'userId':1,'timestamp':-1}"
-)
+@CompoundIndex(name = "user_time_idx", def = "{'userId':1,'timestamp':-1}")
 public class LogEntity {
     @Id
     private String logId;

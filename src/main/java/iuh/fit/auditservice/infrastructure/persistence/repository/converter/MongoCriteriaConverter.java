@@ -8,7 +8,6 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.Collection;
@@ -73,6 +72,12 @@ public class MongoCriteriaConverter {
                 String fieldPath = getFieldName(fieldNode);
                 Object value = getInputValue(right);
 
+                if (value instanceof String strVal) {
+                    if (strVal.startsWith("'") && strVal.endsWith("'") && strVal.length() >= 2) {
+                        value = strVal.substring(1, strVal.length() - 1);
+                    }
+                }
+
                 if ("statusCode".equals(fieldPath) && value != null) {
                     if (value instanceof Number num) {
                         value = num.intValue();
@@ -115,9 +120,11 @@ public class MongoCriteriaConverter {
                     case "<=":
                         assert value != null;
                         return Criteria.where(fieldPath).lte(value);
+                    case "~":
                     case "like":
                         if (value != null) {
-                            return Criteria.where(fieldPath).regex(Pattern.compile(value.toString(), Pattern.CASE_INSENSITIVE));
+                            return Criteria.where(fieldPath)
+                                    .regex(Pattern.compile(value.toString(), Pattern.CASE_INSENSITIVE));
                         }
                         break;
                     case "in":
@@ -133,7 +140,8 @@ public class MongoCriteriaConverter {
             }
         }
 
-        if (node.getClass().getSimpleName().contains("PostfixOperationNode") || node.getClass().getSimpleName().contains("Postfix")) {
+        if (node.getClass().getSimpleName().contains("PostfixOperationNode")
+                || node.getClass().getSimpleName().contains("Postfix")) {
             String op = "";
             try {
                 Object operatorObj = node.getClass().getMethod("getOperator").invoke(node);
