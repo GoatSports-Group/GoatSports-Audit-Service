@@ -105,19 +105,26 @@ public class MongoCriteriaConverter {
                     case ":":
                     case "==":
                     case "=":
+                    case "equal":
+                    case "equals":
                         return Criteria.where(fieldPath).is(value);
                     case "!=":
+                    case "not_equal":
                         return Criteria.where(fieldPath).ne(value);
                     case ">":
+                    case "greater_than":
                         assert value != null;
                         return Criteria.where(fieldPath).gt(value);
                     case ">=":
+                    case "greater_than_or_equal":
                         assert value != null;
                         return Criteria.where(fieldPath).gte(value);
                     case "<":
+                    case "less_than":
                         assert value != null;
                         return Criteria.where(fieldPath).lt(value);
                     case "<=":
+                    case "less_than_or_equal":
                         assert value != null;
                         return Criteria.where(fieldPath).lte(value);
                     case "~":
