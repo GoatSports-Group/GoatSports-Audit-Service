@@ -8,6 +8,7 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
 
+import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.Collection;
@@ -17,6 +18,43 @@ import java.util.regex.Pattern;
 public class MongoCriteriaConverter {
 
     public Query convert(FilterNode node) {
+        try {
+            for (Method m : node.getClass().getMethods()) {
+                if (m.getParameterCount() == 0) {
+                    try {
+                        Object val = m.invoke(node);
+                    } catch (Exception ignored) {
+                        System.out.println("[MongoCriteriaConverter] Node method: " + m.getName() + "() -> (cannot invoke)");
+                    }
+                }
+            }
+            if (node instanceof InfixOperationNode infixNode) {
+                FilterNode left = infixNode.getLeft();
+                FilterNode right = infixNode.getRight();
+                for (Method m : left.getClass().getMethods()) {
+                    if (m.getParameterCount() == 0) {
+                        try {
+                            Object val = m.invoke(left);
+                        } catch (Exception ignored) {
+                            System.out.println("[MongoCriteriaConverter] Left method: " + m.getName() + "() -> (cannot invoke)");
+                        }
+                    }
+                }
+
+                for (Method m : right.getClass().getMethods()) {
+                    if (m.getParameterCount() == 0) {
+                        try {
+                            Object val = m.invoke(right);
+                        } catch (Exception ignored) {
+                            System.out.println("[MongoCriteriaConverter] Right method: " + m.getName() + "() -> (cannot invoke)");
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
         Query query = new Query();
         Criteria criteria = visit(node);
 
@@ -110,21 +148,26 @@ public class MongoCriteriaConverter {
                         return Criteria.where(fieldPath).is(value);
                     case "!=":
                     case "not_equal":
+                    case "notequal":
                         return Criteria.where(fieldPath).ne(value);
                     case ">":
                     case "greater_than":
+                    case "greaterthan":
                         assert value != null;
                         return Criteria.where(fieldPath).gt(value);
                     case ">=":
                     case "greater_than_or_equal":
+                    case "greaterthanorequal":
                         assert value != null;
                         return Criteria.where(fieldPath).gte(value);
                     case "<":
                     case "less_than":
+                    case "lessthan":
                         assert value != null;
                         return Criteria.where(fieldPath).lt(value);
                     case "<=":
                     case "less_than_or_equal":
+                    case "lessthanorequal":
                         assert value != null;
                         return Criteria.where(fieldPath).lte(value);
                     case "~":
@@ -152,14 +195,20 @@ public class MongoCriteriaConverter {
             String op = "";
             try {
                 Object operatorObj = node.getClass().getMethod("getOperator").invoke(node);
-                java.lang.reflect.Method getName = operatorObj.getClass().getMethod("getName");
-                op = (String) getName.invoke(operatorObj);
-            } catch (Exception e) {
-                try {
-                    Object operatorObj = node.getClass().getMethod("getOperator").invoke(node);
-                    op = operatorObj.toString();
-                } catch (Exception ignored) {
+                if (operatorObj != null) {
+                    try {
+                        op = (String) operatorObj.getClass().getMethod("getName").invoke(operatorObj);
+                    } catch (Exception e) {
+                        String className = operatorObj.getClass().getSimpleName();
+                        if (className.endsWith("Operator")) {
+                            op = className.substring(0, className.length() - "Operator".length()).toLowerCase();
+                        } else {
+                            op = className.toLowerCase();
+                        }
+                    }
                 }
+            } catch (Exception e) {
+                // fallback
             }
 
             FilterNode operand = null;
@@ -189,12 +238,17 @@ public class MongoCriteriaConverter {
     private String getOperatorName(InfixOperationNode node) {
         try {
             Object opObj = node.getOperator();
-
+            if (opObj == null) return null;
             try {
-                return (String) opObj.getClass().getMethod("getName").invoke(opObj);
-            } catch (Exception e) {
-                return opObj.toString();
+                String name = (String) opObj.getClass().getMethod("getName").invoke(opObj);
+                if (name != null) return name.toLowerCase();
+            } catch (Exception ignored) {}
+            
+            String className = opObj.getClass().getSimpleName();
+            if (className.endsWith("Operator")) {
+                return className.substring(0, className.length() - "Operator".length()).toLowerCase();
             }
+            return className.toLowerCase();
         } catch (Exception e) {
             return null;
         }
