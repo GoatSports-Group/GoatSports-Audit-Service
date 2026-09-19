@@ -18,6 +18,9 @@ jobs:
           java-version: '21'
           distribution: 'corretto'
 
+      - name: Run tests
+        run: mvn -B test
+
       - name: Build & Push Docker Image with Jib
         run: |
           mvn clean compile jib:build \
