@@ -12,6 +12,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ApiLogEvent {
+    private String eventId;
+    private String correlationId;
     private String userId;
     private String action;
     private String description;

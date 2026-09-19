@@ -2,11 +2,13 @@ package iuh.fit.auditservice.infrastructure.external.kafka.consumer;
 
 import iuh.fit.auditservice.application.dto.event.ApiLogEvent;
 import iuh.fit.auditservice.application.port.persistence.LogRepository;
+import iuh.fit.auditservice.domain.AuditContext;
 import iuh.fit.auditservice.domain.Log;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +21,10 @@ public class AuditLogConsumer {
     public void consume(ApiLogEvent event) {
         try {
             Log logDomain = Log.builder()
+                    .eventId(event.getEventId())
+                    .correlationId(event.getCorrelationId())
+                    .sourceService("api-gateway")
+                    .actorId(event.getUserId())
                     .userId(event.getUserId())
                     .action(event.getAction())
                     .description(event.getDescription())
@@ -26,9 +32,19 @@ public class AuditLogConsumer {
                     .statusCode(event.getStatusCode())
                     .timestamp(event.getTimestamp())
                     .errorMessage(event.getErrorMessage())
+                    .context(AuditContext.builder()
+                            .ipAddress(event.getIpAddress())
+                            .statusCode(event.getStatusCode())
+                            .build())
                     .build();
 
-            logRepository.save(logDomain);
+            if (!StringUtils.hasText(event.getEventId())) {
+                // Producer cũ chưa gắn eventId: vẫn ghi, nhưng không dedupe được.
+                logRepository.save(logDomain);
+            } else if (!logRepository.saveIfAbsent(logDomain)) {
+                log.debug("Bỏ qua audit log trùng eventId {}", event.getEventId());
+                return;
+            }
 
             log.debug("Saved audit log: {} {} (User: {}, Status: {})",
                     event.getAction(), event.getDescription(), event.getUserId(), event.getStatusCode());

@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
@@ -33,6 +34,18 @@ public class LogRepositoryImpl implements LogRepository {
     public void save(Log log) {
         LogEntity logEntity = logEntityMapper.createEntity(log);
         jpaLogRepository.save(logEntity);
+    }
+
+    @Override
+    public boolean saveIfAbsent(Log log) {
+        LogEntity logEntity = logEntityMapper.createEntity(log);
+        try {
+            // Dựa vào unique index eventId thay vì check-then-insert để không hở race giữa hai consumer.
+            mongoTemplate.insert(logEntity);
+            return true;
+        } catch (DuplicateKeyException duplicate) {
+            return false;
+        }
     }
 
     @Override
