@@ -3,6 +3,9 @@ package iuh.fit.auditservice.presentation;
 import iuh.fit.auditservice.application.dto.PageFilter;
 import iuh.fit.auditservice.application.dto.response.base.PageResult;
 import iuh.fit.auditservice.application.dto.response.log.LogResponseCommand;
+import iuh.fit.auditservice.application.dto.response.log.LogStatsResponseCommand;
+import org.springframework.format.annotation.DateTimeFormat;
+import java.time.LocalDateTime;
 import iuh.fit.auditservice.application.exception.ServiceException;
 import iuh.fit.auditservice.application.mapper.LogMapper;
 import iuh.fit.auditservice.application.service.LogService;
@@ -28,6 +31,19 @@ public class LogController {
     private final LogService logService;
     private final LogMapper logMapper;
     private final LogConverter logConverter;
+
+    /**
+     * Thong ke nhat ky trong [from, to) (gio UTC nhu `timestamp` da luu), dem o DB thay vi tai vai tram log
+     * ve client. Trang Nhat ky goi cho "hom nay" theo gio may nguoi xem.
+     */
+    @GetMapping("/stats")
+    @PreAuthorize("hasAuthority('GET_LOGS')")
+    public ResponseEntity<LogStatsResponseCommand> getStats(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to
+    ) throws ServiceException {
+        return ResponseEntity.ok(logService.getStats(from, to));
+    }
 
     @GetMapping
     @PreAuthorize("hasAuthority('GET_LOGS')")

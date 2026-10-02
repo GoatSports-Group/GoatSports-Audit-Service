@@ -2,7 +2,10 @@ package iuh.fit.auditservice.application.port.persistence;
 
 import iuh.fit.auditservice.application.dto.PageFilter;
 import iuh.fit.auditservice.application.dto.response.base.PageResult;
+import iuh.fit.auditservice.application.dto.response.log.LogStatsResponseCommand;
 import iuh.fit.auditservice.domain.Log;
+
+import java.time.LocalDateTime;
 
 public interface LogRepository {
     void save(Log log);
@@ -15,4 +18,7 @@ public interface LogRepository {
     boolean saveIfAbsent(Log log);
 
     PageResult<Log> findAll(PageFilter filter);
+
+    /** Dem trong [from, to): tong, theo nhom ma trang thai, nguoi dung, nghiep vu, va theo tung gio. */
+    LogStatsResponseCommand stats(LocalDateTime from, LocalDateTime to, int hours);
 }

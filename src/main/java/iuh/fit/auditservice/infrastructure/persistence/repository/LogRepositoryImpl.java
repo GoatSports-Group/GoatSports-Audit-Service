@@ -15,10 +15,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import iuh.fit.auditservice.application.dto.response.log.LogStatsResponseCommand;
+
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
@@ -78,5 +82,33 @@ public class LogRepositoryImpl implements LogRepository {
                 filter.size(),
                 (int) Math.ceil((double) total / pageSize)
         );
+    }
+
+    // ponytail: 6 + (so gio) lan count/distinct tren index timestamp. Du cho trang admin xem 1 ngay (~30 truy van);
+    // can khoang dai hon thi chuyen sang mot aggregation $group theo gio.
+    @Override
+    public LogStatsResponseCommand stats(LocalDateTime from, LocalDateTime to, int hours) {
+        Criteria range = Criteria.where("timestamp").gte(from).lt(to);
+        long total = mongoTemplate.count(new Query(range), LogEntity.class);
+        long s2xx = countStatus(from, to, 200, 300);
+        long s3xx = countStatus(from, to, 300, 400);
+        long s4xx = countStatus(from, to, 400, 500);
+        long s5xx = countStatus(from, to, 500, 1000);
+        List<String> actions = mongoTemplate.findDistinct(new Query(range), "action", LogEntity.class, String.class).stream()
+                .filter(StringUtils::hasText).sorted().toList();
+        long users = mongoTemplate.findDistinct(new Query(range), "userId", LogEntity.class, String.class).stream()
+                .filter(id -> StringUtils.hasText(id) && !"anonymous".equalsIgnoreCase(id)).count();
+        List<Long> hourly = new java.util.ArrayList<>(hours);
+        for (int hour = 0; hour < hours; hour++) {
+            LocalDateTime start = from.plusHours(hour);
+            LocalDateTime end = start.plusHours(1).isBefore(to) ? start.plusHours(1) : to;
+            hourly.add(mongoTemplate.count(new Query(Criteria.where("timestamp").gte(start).lt(end)), LogEntity.class));
+        }
+        return new LogStatsResponseCommand(from, to, total, s4xx + s5xx, s2xx, s3xx, s4xx, s5xx, users, actions, hourly);
+    }
+
+    private long countStatus(LocalDateTime from, LocalDateTime to, int min, int maxExclusive) {
+        return mongoTemplate.count(new Query(Criteria.where("timestamp").gte(from).lt(to)
+                .and("statusCode").gte(min).lt(maxExclusive)), LogEntity.class);
     }
 }
