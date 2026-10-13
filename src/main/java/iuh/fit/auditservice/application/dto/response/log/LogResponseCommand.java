@@ -10,5 +10,13 @@ public record LogResponseCommand(
     String ipAddress,
     int statusCode,
     LocalDateTime timestamp,
-    String errorMessage
+    String errorMessage,
+    String sourceService,
+    String eventType,
+    String correlationId,
+    String resourceType,
+    String resourceId,
+    String httpMethod,
+    String requestUri,
+    String userAgent
 ) {}

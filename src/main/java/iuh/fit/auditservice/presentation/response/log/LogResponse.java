@@ -18,4 +18,12 @@ public class LogResponse {
     private int statusCode;
     private LocalDateTime timestamp;
     private String errorMessage;
+    private String sourceService;
+    private String eventType;
+    private String correlationId;
+    private String resourceType;
+    private String resourceId;
+    private String httpMethod;
+    private String requestUri;
+    private String userAgent;
 }

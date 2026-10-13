@@ -18,43 +18,6 @@ import java.util.regex.Pattern;
 public class MongoCriteriaConverter {
 
     public Query convert(FilterNode node) {
-        try {
-            for (Method m : node.getClass().getMethods()) {
-                if (m.getParameterCount() == 0) {
-                    try {
-                        Object val = m.invoke(node);
-                    } catch (Exception ignored) {
-                        System.out.println("[MongoCriteriaConverter] Node method: " + m.getName() + "() -> (cannot invoke)");
-                    }
-                }
-            }
-            if (node instanceof InfixOperationNode infixNode) {
-                FilterNode left = infixNode.getLeft();
-                FilterNode right = infixNode.getRight();
-                for (Method m : left.getClass().getMethods()) {
-                    if (m.getParameterCount() == 0) {
-                        try {
-                            Object val = m.invoke(left);
-                        } catch (Exception ignored) {
-                            System.out.println("[MongoCriteriaConverter] Left method: " + m.getName() + "() -> (cannot invoke)");
-                        }
-                    }
-                }
-
-                for (Method m : right.getClass().getMethods()) {
-                    if (m.getParameterCount() == 0) {
-                        try {
-                            Object val = m.invoke(right);
-                        } catch (Exception ignored) {
-                            System.out.println("[MongoCriteriaConverter] Right method: " + m.getName() + "() -> (cannot invoke)");
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        
         Query query = new Query();
         Criteria criteria = visit(node);
 

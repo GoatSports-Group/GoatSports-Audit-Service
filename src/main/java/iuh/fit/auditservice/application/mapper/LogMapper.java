@@ -4,12 +4,18 @@ import iuh.fit.auditservice.application.dto.response.base.PageResult;
 import iuh.fit.auditservice.application.dto.response.log.LogResponseCommand;
 import iuh.fit.auditservice.domain.Log;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
 @Mapper(componentModel = "spring")
 public interface LogMapper {
     List<LogResponseCommand> toLogResponseCommandList(List<Log> logs);
+
+    @Mapping(target = "httpMethod", source = "context.httpMethod")
+    @Mapping(target = "requestUri", source = "context.requestUri")
+    @Mapping(target = "userAgent", source = "context.userAgent")
+    LogResponseCommand toCommand(Log log);
 
     default PageResult<LogResponseCommand> toLogResponseCommand(PageResult<Log> logs) {
         if (logs == null) return null;
