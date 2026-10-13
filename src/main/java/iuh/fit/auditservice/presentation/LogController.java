@@ -33,7 +33,7 @@ public class LogController {
     private final LogConverter logConverter;
 
     /**
-     * Thong ke nhat ky trong [from, to) (gio UTC nhu `timestamp` da luu), dem o DB thay vi tai vai tram log
+     * Thong ke nhat ky trong [from, to) (gio may chu, nhu `timestamp` da luu bang LocalDateTime), dem o DB thay vi tai vai tram log
      * ve client. Trang Nhat ky goi cho "hom nay" theo gio may nguoi xem.
      */
     @GetMapping("/stats")

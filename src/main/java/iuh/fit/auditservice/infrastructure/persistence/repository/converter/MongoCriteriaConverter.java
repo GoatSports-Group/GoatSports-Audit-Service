@@ -4,6 +4,7 @@ import com.turkraft.springfilter.parser.node.FilterNode;
 import com.turkraft.springfilter.parser.node.InfixOperationNode;
 import com.turkraft.springfilter.parser.node.FieldNode;
 import com.turkraft.springfilter.parser.node.InputNode;
+import com.turkraft.springfilter.parser.node.PriorityNode;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
@@ -31,6 +32,12 @@ public class MongoCriteriaConverter {
     private Criteria visit(FilterNode node) {
         if (node == null) {
             return null;
+        }
+
+        // Biểu thức trong ngoặc, vd "(description ~ 'x' or action = 'LOGIN') and ...": trước đây trả null nên cả vế
+        // bị bỏ qua mà không báo gì.
+        if (node instanceof PriorityNode priorityNode) {
+            return visit(priorityNode.getNode());
         }
 
         if (node instanceof InfixOperationNode infixNode) {
