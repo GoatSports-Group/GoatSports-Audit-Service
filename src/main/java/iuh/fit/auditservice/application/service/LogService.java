@@ -17,6 +17,12 @@ public interface LogService {
     /** Tài khoản đăng nhập thất bại liên tục trong cửa sổ theo dõi hiện tại. */
     java.util.List<iuh.fit.auditservice.application.dto.response.log.FailedLoginBurstResponseCommand> getFailedLoginBursts();
 
+    /**
+     * Admin đánh dấu đã xử lý cảnh báo của một tài khoản: ẩn đi cho tới khi có lần đăng nhập sai mới hơn
+     * (lúc đó hiện và báo lại). Thao tác được ghi vào nhật ký.
+     */
+    void resolveFailedLogins(String account, String resolvedBy) throws iuh.fit.auditservice.application.exception.ServiceException;
+
     /** Báo admin các tài khoản đăng nhập thất bại liên tục (mỗi tài khoản tối đa một lần mỗi cửa sổ). */
     void alertFailedLogins();
 

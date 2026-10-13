@@ -15,6 +15,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class LogServiceImpl implements LogService {
@@ -40,8 +41,29 @@ public class LogServiceImpl implements LogService {
     @Override
     public List<FailedLoginBurstResponseCommand> getFailedLoginBursts() {
         // timestamp lưu theo giờ máy chủ (LocalDateTime), nên so cũng theo giờ máy chủ.
-        return logRepository.failedLoginBursts(LocalDateTime.now(clock).minusMinutes(failedLoginWindowMinutes),
-                failedLoginThreshold);
+        List<FailedLoginBurstResponseCommand> bursts = logRepository.failedLoginBursts(
+                LocalDateTime.now(clock).minusMinutes(failedLoginWindowMinutes), failedLoginThreshold);
+        if (bursts.isEmpty()) return bursts;
+        Map<String, LocalDateTime> resolved = logRepository.failedLoginResolutions(
+                bursts.stream().map(FailedLoginBurstResponseCommand::account).toList());
+        // Đã xử lý thì ẩn, trừ khi có lần sai mới sau lúc xử lý.
+        return bursts.stream()
+                .filter(burst -> !resolved.containsKey(burst.account()) || burst.lastAt().isAfter(resolved.get(burst.account())))
+                .toList();
+    }
+
+    @Override
+    public void resolveFailedLogins(String account, String resolvedBy) throws ServiceException {
+        if (account == null || account.isBlank()) throw new ServiceException("Thiếu tài khoản cần xử lý.");
+        LocalDateTime now = LocalDateTime.now(clock);
+        logRepository.resolveFailedLogins(account.trim(), now, resolvedBy);
+        logRepository.save(Log.builder()
+                .sourceService("audit-service").actorId(resolvedBy).userId(resolvedBy)
+                .action("RESOLVE_FAILED_LOGIN_ALERT")
+                .description("Admin [" + resolvedBy + "] đã xử lý cảnh báo đăng nhập thất bại của " + account.trim())
+                .statusCode(200).timestamp(now)
+                .resourceType("ACCOUNT").resourceId(account.trim())
+                .build());
     }
 
     @Override

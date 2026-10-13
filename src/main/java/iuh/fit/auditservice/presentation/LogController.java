@@ -8,6 +8,7 @@ import iuh.fit.auditservice.application.dto.response.log.LogResponseCommand;
 import iuh.fit.auditservice.application.dto.response.log.LogStatsResponseCommand;
 import iuh.fit.auditservice.application.exception.ServiceException;
 import iuh.fit.auditservice.application.mapper.LogMapper;
+import iuh.fit.auditservice.application.port.security.CurrentUserProvider;
 import iuh.fit.auditservice.application.service.LogService;
 import iuh.fit.auditservice.presentation.converter.LogConverter;
 import iuh.fit.auditservice.presentation.response.log.LogResponse;
@@ -18,6 +19,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -32,6 +35,7 @@ public class LogController {
     private final LogService logService;
     private final LogMapper logMapper;
     private final LogConverter logConverter;
+    private final CurrentUserProvider currentUserProvider;
 
     /**
      * Thong ke nhat ky trong [from, to) (gio may chu, nhu `timestamp` da luu bang LocalDateTime), dem o DB thay vi tai vai tram log
@@ -51,6 +55,18 @@ public class LogController {
     @PreAuthorize("hasAuthority('GET_LOGS')")
     public List<FailedLoginBurstResponseCommand> failedLogins() {
         return logService.getFailedLoginBursts();
+    }
+
+    /** Đánh dấu đã xử lý cảnh báo của một tài khoản; có lần sai mới thì cảnh báo hiện lại. */
+    @PostMapping("/alerts/failed-logins/resolve")
+    @PreAuthorize("hasAuthority('RESOLVE_SECURITY_ALERT')")
+    public ResponseEntity<Void> resolveFailedLogins(@RequestBody ResolveFailedLoginRequest request) throws ServiceException {
+        logService.resolveFailedLogins(request.account(), currentUserProvider.getCurrentUserId()
+                .orElseThrow(() -> new ServiceException("Phiên đăng nhập đã hết hạn")));
+        return ResponseEntity.noContent().build();
+    }
+
+    public record ResolveFailedLoginRequest(String account) {
     }
 
     @GetMapping

@@ -151,4 +151,25 @@ class MonitoringFeaturesTest {
         logs.purgeExpired();
         verify(repository).deleteOlderThan(LocalDateTime.now(clock).minusDays(30));
     }
+
+    @Test
+    void resolvedFailedLoginsStayHiddenUntilANewerFailureAndTheResolutionIsLogged() throws ServiceException {
+        LogRepository repository = mock(LogRepository.class);
+        LocalDateTime lastFailure = LocalDateTime.of(2026, 10, 14, 10, 0);
+        when(repository.failedLoginBursts(any(), anyInt())).thenReturn(List.of(
+                new FailedLoginBurstResponseCommand("attacker@x.vn", 7, lastFailure.minusMinutes(5), lastFailure, "1.2.3.4")));
+        LogServiceImpl logs = new LogServiceImpl(repository, alertPort, clock, 180, 15, 5);
+
+        when(repository.failedLoginResolutions(any())).thenReturn(Map.of("attacker@x.vn", lastFailure.plusMinutes(1)));
+        assertThat(logs.getFailedLoginBursts()).isEmpty();
+        logs.alertFailedLogins();
+        assertThat(alerts).isEmpty();
+
+        when(repository.failedLoginResolutions(any())).thenReturn(Map.of("attacker@x.vn", lastFailure.minusMinutes(1)));
+        assertThat(logs.getFailedLoginBursts()).hasSize(1);
+
+        logs.resolveFailedLogins(" attacker@x.vn ", "admin-1");
+        verify(repository).resolveFailedLogins(org.mockito.ArgumentMatchers.eq("attacker@x.vn"), any(), org.mockito.ArgumentMatchers.eq("admin-1"));
+        verify(repository).save(org.mockito.ArgumentMatchers.argThat(log -> "RESOLVE_FAILED_LOGIN_ALERT".equals(log.getAction())));
+    }
 }

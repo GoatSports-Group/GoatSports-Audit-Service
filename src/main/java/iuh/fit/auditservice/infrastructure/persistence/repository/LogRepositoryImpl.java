@@ -113,6 +113,25 @@ public class LogRepositoryImpl implements LogRepository {
         return mongoTemplate.remove(new Query(Criteria.where("timestamp").lt(cutoff)), LogEntity.class).getDeletedCount();
     }
 
+    /** Một document mỗi tài khoản (_id = tài khoản): lần xử lý gần nhất. */
+    private static final String RESOLUTIONS = "failed_login_resolutions";
+
+    @Override
+    public void resolveFailedLogins(String account, LocalDateTime at, String resolvedBy) {
+        mongoTemplate.upsert(new Query(Criteria.where("_id").is(account)),
+                new org.springframework.data.mongodb.core.query.Update().set("resolvedAt", at).set("resolvedBy", resolvedBy),
+                RESOLUTIONS);
+    }
+
+    @Override
+    public java.util.Map<String, LocalDateTime> failedLoginResolutions(java.util.Collection<String> accounts) {
+        java.util.Map<String, LocalDateTime> result = new java.util.HashMap<>();
+        mongoTemplate.find(new Query(Criteria.where("_id").in(accounts)), org.bson.Document.class, RESOLUTIONS)
+                .forEach(row -> result.put(row.getString("_id"), toLocal(row.get("resolvedAt"))));
+        result.values().removeIf(java.util.Objects::isNull);
+        return result;
+    }
+
     @Override
     public List<FailedLoginBurstResponseCommand> failedLoginBursts(LocalDateTime since, int threshold) {
         Aggregation aggregation = Aggregation.newAggregation(

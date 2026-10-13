@@ -33,6 +33,11 @@ public class LogDecorator implements LogService {
     }
 
     @Override
+    public void resolveFailedLogins(String account, String resolvedBy) throws ServiceException {
+        logServiceImpl.resolveFailedLogins(account, resolvedBy);
+    }
+
+    @Override
     public void alertFailedLogins() {
         logServiceImpl.alertFailedLogins();
     }

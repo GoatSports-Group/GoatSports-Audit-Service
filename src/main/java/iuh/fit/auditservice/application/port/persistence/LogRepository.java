@@ -25,6 +25,12 @@ public interface LogRepository {
     /** Xóa bản ghi có timestamp trước {@code cutoff}; trả số bản ghi đã xóa. */
     long deleteOlderThan(LocalDateTime cutoff);
 
+    /** Ghi nhận admin đã xử lý cảnh báo đăng nhập thất bại của {@code account} tại {@code at}. */
+    void resolveFailedLogins(String account, LocalDateTime at, String resolvedBy);
+
+    /** Lần xử lý gần nhất của từng tài khoản (không có thì không nằm trong map). */
+    java.util.Map<String, LocalDateTime> failedLoginResolutions(java.util.Collection<String> accounts);
+
     /** Tài khoản có ít nhất {@code threshold} lần LOGIN lỗi (4xx/5xx) từ {@code since}, nhiều lần nhất trước. */
     java.util.List<iuh.fit.auditservice.application.dto.response.log.FailedLoginBurstResponseCommand> failedLoginBursts(
             LocalDateTime since, int threshold);
