@@ -1,19 +1,19 @@
 package iuh.fit.auditservice.presentation;
 
 import iuh.fit.auditservice.application.dto.PageFilter;
+import iuh.fit.auditservice.application.dto.response.base.BaseListResponse;
 import iuh.fit.auditservice.application.dto.response.base.PageResult;
+import iuh.fit.auditservice.application.dto.response.log.FailedLoginBurstResponseCommand;
 import iuh.fit.auditservice.application.dto.response.log.LogResponseCommand;
 import iuh.fit.auditservice.application.dto.response.log.LogStatsResponseCommand;
-import org.springframework.format.annotation.DateTimeFormat;
-import java.time.LocalDateTime;
 import iuh.fit.auditservice.application.exception.ServiceException;
 import iuh.fit.auditservice.application.mapper.LogMapper;
 import iuh.fit.auditservice.application.service.LogService;
-import iuh.fit.auditservice.application.dto.response.base.BaseListResponse;
 import iuh.fit.auditservice.presentation.converter.LogConverter;
 import iuh.fit.auditservice.presentation.response.log.LogResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -43,6 +44,13 @@ public class LogController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to
     ) throws ServiceException {
         return ResponseEntity.ok(logService.getStats(from, to));
+    }
+
+    /** Tài khoản đăng nhập thất bại liên tục trong cửa sổ theo dõi (mặc định 5 lần / 15 phút). */
+    @GetMapping("/alerts/failed-logins")
+    @PreAuthorize("hasAuthority('GET_LOGS')")
+    public List<FailedLoginBurstResponseCommand> failedLogins() {
+        return logService.getFailedLoginBursts();
     }
 
     @GetMapping

@@ -19,7 +19,8 @@ import static org.mockito.Mockito.when;
 
 class LogServiceImplTest {
     private final LogRepository repository = mock(LogRepository.class);
-    private final LogServiceImpl service = new LogServiceImpl(repository);
+    private final LogServiceImpl service = new LogServiceImpl(repository, (eventId, title, content, type, ref) -> { },
+            java.time.Clock.systemDefaultZone(), 180, 15, 5);
     private final LocalDateTime from = LocalDateTime.of(2026, 10, 2, 17, 0);
 
     @Test

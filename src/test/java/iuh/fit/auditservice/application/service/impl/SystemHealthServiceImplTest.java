@@ -19,7 +19,7 @@ class SystemHealthServiceImplTest {
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-10T03:00:00Z"), ZoneOffset.UTC);
 
     /** Trả số liệu theo từ khóa trong câu truy vấn, đồng thời ghi lại các câu đã chạy. */
-    private static final class FakeMetrics implements MetricsQueryPort {
+    private static class FakeMetrics implements MetricsQueryPort {
         final List<String> queries = new ArrayList<>();
 
         @Override
@@ -30,6 +30,12 @@ class SystemHealthServiceImplTest {
             if (promQl.startsWith("sum by (service) (rate(http")) return Map.of("venue-service", 4.0, "payment-service", 2.0);
             if (promQl.startsWith("histogram_quantile")) return Map.of("venue-service", 0.12, "payment-service", 0.2);
             if (promQl.contains("process_uptime_seconds")) return Map.of("venue-service", 3600.0);
+            return Map.of();
+        }
+
+        @Override
+        public Map<String, List<Double>> rangeByService(String promQl, Instant start, Instant end, java.time.Duration step) {
+            queries.add(promQl);
             return Map.of();
         }
     }
@@ -70,8 +76,11 @@ class SystemHealthServiceImplTest {
 
     @Test
     void unreachablePrometheusIsReportedSeparatelyFromServicesBeingDown() {
-        MetricsQueryPort unreachable = promQl -> {
-            throw new MetricsQueryPort.MetricsUnavailableException("down", null);
+        MetricsQueryPort unreachable = new FakeMetrics() {
+            @Override
+            public Map<String, Double> queryByService(String promQl) {
+                throw new MetricsQueryPort.MetricsUnavailableException("down", null);
+            }
         };
 
         SystemHealthResponseCommand health = new SystemHealthServiceImpl(unreachable, null, CLOCK).getServicesHealth();

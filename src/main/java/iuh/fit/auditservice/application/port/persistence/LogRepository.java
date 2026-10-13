@@ -21,4 +21,11 @@ public interface LogRepository {
 
     /** Dem trong [from, to): tong, theo nhom ma trang thai, nguoi dung, nghiep vu, va theo tung gio. */
     LogStatsResponseCommand stats(LocalDateTime from, LocalDateTime to, int hours);
+
+    /** Xóa bản ghi có timestamp trước {@code cutoff}; trả số bản ghi đã xóa. */
+    long deleteOlderThan(LocalDateTime cutoff);
+
+    /** Tài khoản có ít nhất {@code threshold} lần LOGIN lỗi (4xx/5xx) từ {@code since}, nhiều lần nhất trước. */
+    java.util.List<iuh.fit.auditservice.application.dto.response.log.FailedLoginBurstResponseCommand> failedLoginBursts(
+            LocalDateTime since, int threshold);
 }

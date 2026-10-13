@@ -26,4 +26,19 @@ public class LogDecorator implements LogService {
     public LogStatsResponseCommand getStats(LocalDateTime from, LocalDateTime to) throws ServiceException {
         return logServiceImpl.getStats(from, to);
     }
+
+    @Override
+    public java.util.List<iuh.fit.auditservice.application.dto.response.log.FailedLoginBurstResponseCommand> getFailedLoginBursts() {
+        return logServiceImpl.getFailedLoginBursts();
+    }
+
+    @Override
+    public void alertFailedLogins() {
+        logServiceImpl.alertFailedLogins();
+    }
+
+    @Override
+    public long purgeExpired() {
+        return logServiceImpl.purgeExpired();
+    }
 }

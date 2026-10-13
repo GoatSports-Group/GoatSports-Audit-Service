@@ -3,6 +3,8 @@ package iuh.fit.auditservice.infrastructure.persistence.repository;
 import com.turkraft.springfilter.parser.FilterParser;
 import iuh.fit.auditservice.application.dto.PageFilter;
 import iuh.fit.auditservice.application.dto.response.base.PageResult;
+import iuh.fit.auditservice.application.dto.response.log.FailedLoginBurstResponseCommand;
+import iuh.fit.auditservice.application.dto.response.log.LogStatsResponseCommand;
 import iuh.fit.auditservice.application.port.persistence.LogRepository;
 import iuh.fit.auditservice.domain.Log;
 import iuh.fit.auditservice.infrastructure.persistence.entity.LogEntity;
@@ -10,17 +12,16 @@ import iuh.fit.auditservice.infrastructure.persistence.mapper.LogEntityMapper;
 import iuh.fit.auditservice.infrastructure.persistence.repository.converter.MongoCriteriaConverter;
 import iuh.fit.auditservice.infrastructure.persistence.repository.jpa.JpaLogRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-
-import iuh.fit.auditservice.application.dto.response.log.LogStatsResponseCommand;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -105,6 +106,37 @@ public class LogRepositoryImpl implements LogRepository {
             hourly.add(mongoTemplate.count(new Query(Criteria.where("timestamp").gte(start).lt(end)), LogEntity.class));
         }
         return new LogStatsResponseCommand(from, to, total, s4xx + s5xx, s2xx, s3xx, s4xx, s5xx, users, actions, hourly);
+    }
+
+    @Override
+    public long deleteOlderThan(LocalDateTime cutoff) {
+        return mongoTemplate.remove(new Query(Criteria.where("timestamp").lt(cutoff)), LogEntity.class).getDeletedCount();
+    }
+
+    @Override
+    public List<FailedLoginBurstResponseCommand> failedLoginBursts(LocalDateTime since, int threshold) {
+        Aggregation aggregation = Aggregation.newAggregation(
+                Aggregation.match(Criteria.where("action").is("LOGIN").and("statusCode").gte(400).and("timestamp").gte(since)),
+                Aggregation.sort(Sort.Direction.ASC, "timestamp"),
+                Aggregation.group("userId").count().as("attempts").first("timestamp").as("firstAt")
+                        .last("timestamp").as("lastAt").last("ipAddress").as("lastIp"),
+                Aggregation.match(Criteria.where("attempts").gte(threshold)),
+                Aggregation.sort(Sort.Direction.DESC, "attempts"),
+                Aggregation.limit(50));
+        return mongoTemplate.aggregate(aggregation, LogEntity.class, org.bson.Document.class).getMappedResults().stream()
+                .map(row -> new FailedLoginBurstResponseCommand(
+                        String.valueOf(row.get("_id")),
+                        ((Number) row.get("attempts")).longValue(),
+                        toLocal(row.get("firstAt")),
+                        toLocal(row.get("lastAt")),
+                        row.getString("lastIp")))
+                .toList();
+    }
+
+    /** Mongo trả Date (UTC) cho trường LocalDateTime; đổi lại giờ máy chủ như lúc ghi. */
+    private static LocalDateTime toLocal(Object value) {
+        return value instanceof java.util.Date date
+                ? LocalDateTime.ofInstant(date.toInstant(), java.time.ZoneId.systemDefault()) : null;
     }
 
     private long countStatus(LocalDateTime from, LocalDateTime to, int min, int maxExclusive) {

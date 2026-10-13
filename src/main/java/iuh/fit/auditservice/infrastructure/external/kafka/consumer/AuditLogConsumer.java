@@ -23,7 +23,8 @@ public class AuditLogConsumer {
             Log logDomain = Log.builder()
                     .eventId(event.getEventId())
                     .correlationId(event.getCorrelationId())
-                    .sourceService("api-gateway")
+                    // Producer cũ không gửi tên service: giữ nhãn cũ "api-gateway".
+                    .sourceService(StringUtils.hasText(event.getSourceService()) ? event.getSourceService() : "api-gateway")
                     .actorId(event.getUserId())
                     .userId(event.getUserId())
                     .action(event.getAction())
@@ -35,6 +36,9 @@ public class AuditLogConsumer {
                     .context(AuditContext.builder()
                             .ipAddress(event.getIpAddress())
                             .statusCode(event.getStatusCode())
+                            .httpMethod(event.getHttpMethod())
+                            .requestUri(event.getRequestUri())
+                            .userAgent(event.getUserAgent())
                             .build())
                     .build();
 
