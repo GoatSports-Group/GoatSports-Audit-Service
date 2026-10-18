@@ -1,0 +1,16 @@
+include:
+  - project: 'goatsports1/backend/ci-templates'
+    ref: main
+    file: '/templates/java-maven.yml'
+  - project: 'goatsports1/backend/ci-templates'
+    ref: main
+    file: '/templates/jenkins-trigger.yml'
+
+variables:
+  JENKINS_JOB_NAME: "GoatSports-CD"
+  JENKINS_SERVICE_NAME: "audit-service"
+
+stages:
+  - test
+  - build
+  - deploy
