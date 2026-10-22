@@ -2,6 +2,7 @@ package iuh.fit.auditservice.application.service;
 
 import iuh.fit.auditservice.application.dto.PageFilter;
 import iuh.fit.auditservice.application.dto.response.base.PageResult;
+import iuh.fit.auditservice.application.dto.response.log.ChainVerificationResponseCommand;
 import iuh.fit.auditservice.application.dto.response.log.FailedLoginBurstResponseCommand;
 import iuh.fit.auditservice.application.dto.response.log.LogStatsResponseCommand;
 import iuh.fit.auditservice.application.exception.ServiceException;
@@ -30,4 +31,7 @@ public interface LogService {
 
     /** Xóa nhật ký cũ hơn số ngày lưu giữ; trả số bản ghi đã xóa. */
     long purgeExpired();
+
+    /** Kiểm tra chuỗi hash nhật ký: phát hiện bản ghi bị sửa, bị xóa giữa chừng hay bị chèn. */
+    ChainVerificationResponseCommand verifyChain();
 }

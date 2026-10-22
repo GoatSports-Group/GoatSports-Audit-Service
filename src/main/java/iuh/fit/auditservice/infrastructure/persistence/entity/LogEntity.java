@@ -55,4 +55,12 @@ public class LogEntity {
 
     private AuditContext context;
     private List<AuditChange> changes;
+    /**
+     * Vị trí trong chuỗi hash ({@code AuditHashChain}); null ở bản ghi cũ trước khi có chuỗi. Unique để hai consumer
+     * (hay hai instance) không chiếm cùng một chỗ: ai chèn sau thì đọc lại đầu chuỗi và thử lại.
+     */
+    @Indexed(unique = true, sparse = true, name = "chain_sequence_idx")
+    private Long sequence;
+    private String previousHash;
+    private String recordHash;
 }

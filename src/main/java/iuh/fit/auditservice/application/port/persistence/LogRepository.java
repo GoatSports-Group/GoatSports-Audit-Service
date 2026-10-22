@@ -2,6 +2,7 @@ package iuh.fit.auditservice.application.port.persistence;
 
 import iuh.fit.auditservice.application.dto.PageFilter;
 import iuh.fit.auditservice.application.dto.response.base.PageResult;
+import iuh.fit.auditservice.application.dto.response.log.ChainVerificationResponseCommand;
 import iuh.fit.auditservice.application.dto.response.log.FailedLoginBurstResponseCommand;
 import iuh.fit.auditservice.application.dto.response.log.LogStatsResponseCommand;
 import iuh.fit.auditservice.domain.Log;
@@ -20,6 +21,9 @@ public interface LogRepository {
      * @return false nếu eventId đã tồn tại (consumer retry / event trùng), true nếu vừa ghi mới.
      */
     boolean saveIfAbsent(Log log);
+
+    /** Đi lại chuỗi hash từ bản ghi còn giữ cũ nhất; dừng ở chỗ bị sửa / thiếu / đứt liên kết đầu tiên. */
+    ChainVerificationResponseCommand verifyChain();
 
     PageResult<Log> findAll(PageFilter filter);
 

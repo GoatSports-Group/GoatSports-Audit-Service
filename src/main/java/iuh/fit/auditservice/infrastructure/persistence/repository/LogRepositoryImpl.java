@@ -3,14 +3,15 @@ package iuh.fit.auditservice.infrastructure.persistence.repository;
 import com.turkraft.springfilter.parser.FilterParser;
 import iuh.fit.auditservice.application.dto.PageFilter;
 import iuh.fit.auditservice.application.dto.response.base.PageResult;
+import iuh.fit.auditservice.application.dto.response.log.ChainVerificationResponseCommand;
 import iuh.fit.auditservice.application.dto.response.log.FailedLoginBurstResponseCommand;
 import iuh.fit.auditservice.application.dto.response.log.LogStatsResponseCommand;
 import iuh.fit.auditservice.application.port.persistence.LogRepository;
 import iuh.fit.auditservice.domain.Log;
+import iuh.fit.auditservice.infrastructure.persistence.chain.AuditHashChain;
 import iuh.fit.auditservice.infrastructure.persistence.entity.LogEntity;
 import iuh.fit.auditservice.infrastructure.persistence.mapper.LogEntityMapper;
 import iuh.fit.auditservice.infrastructure.persistence.repository.converter.MongoCriteriaConverter;
-import iuh.fit.auditservice.infrastructure.persistence.repository.jpa.JpaLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.bson.Document;
 import org.springframework.dao.DuplicateKeyException;
@@ -27,6 +28,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -34,31 +36,69 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 @Component
 @RequiredArgsConstructor
 public class LogRepositoryImpl implements LogRepository {
     private final MongoTemplate mongoTemplate;
-    private final JpaLogRepository jpaLogRepository;
     private final LogEntityMapper logEntityMapper;
     private final FilterParser filterParser;
     private final MongoCriteriaConverter mongoCriteriaConverter;
 
     @Override
     public void save(Log log) {
-        LogEntity logEntity = logEntityMapper.createEntity(log);
-        jpaLogRepository.save(logEntity);
+        appendToChain(logEntityMapper.createEntity(log));
     }
 
     @Override
     public boolean saveIfAbsent(Log log) {
-        LogEntity logEntity = logEntityMapper.createEntity(log);
         try {
             // Dựa vào unique index eventId thay vì check-then-insert để không hở race giữa hai consumer.
-            mongoTemplate.insert(logEntity);
+            appendToChain(logEntityMapper.createEntity(log));
             return true;
         } catch (DuplicateKeyException duplicate) {
             return false;
+        }
+    }
+
+    @Override
+    public ChainVerificationResponseCommand verifyChain() {
+        Query chained = new Query(Criteria.where("sequence").exists(true)).with(Sort.by(Sort.Direction.ASC, "sequence"));
+        AuditHashChain.Verification result;
+        try (Stream<LogEntity> entries = mongoTemplate.stream(chained, LogEntity.class)) {
+            result = AuditHashChain.verify(entries::iterator);
+        }
+        long unchained = mongoTemplate.count(new Query(Criteria.where("sequence").exists(false)), LogEntity.class);
+        return new ChainVerificationResponseCommand(result.checked(), unchained, result.intact(),
+                result.brokenAtSequence(), result.problem());
+    }
+
+    /**
+     * Mọi bản ghi mới đều nối vào chuỗi hash ở đây. Hai luồng ghi cùng lúc tính ra cùng sequence thì unique index
+     * chặn một bên; bên đó đọc lại đầu chuỗi rồi thử lại. Trùng eventId thì ném ra cho {@link #saveIfAbsent}.
+     */
+    // ponytail: mỗi lần ghi thêm một truy vấn đọc đầu chuỗi và cạnh tranh trên một chuỗi chung; đủ cho lưu lượng nhật ký
+    // hiện tại, cần nhiều hơn thì tách chuỗi theo partition Kafka.
+    private void appendToChain(LogEntity entity) {
+        if (entity.getTimestamp() != null) {
+            // Mongo chỉ lưu tới mili giây: cắt trước khi hash để đọc lại vẫn khớp.
+            entity.setTimestamp(entity.getTimestamp().truncatedTo(ChronoUnit.MILLIS));
+        }
+        for (int attempt = 1; ; attempt++) {
+            LogEntity tip = mongoTemplate.findOne(new Query(Criteria.where("sequence").exists(true))
+                    .with(Sort.by(Sort.Direction.DESC, "sequence")).limit(1), LogEntity.class);
+            entity.setLogId(null);
+            entity.setSequence(tip == null ? 1L : tip.getSequence() + 1);
+            entity.setPreviousHash(tip == null ? AuditHashChain.GENESIS : tip.getRecordHash());
+            entity.setRecordHash(AuditHashChain.hash(entity));
+            try {
+                mongoTemplate.insert(entity);
+                return;
+            } catch (DuplicateKeyException duplicate) {
+                boolean sequenceTaken = String.valueOf(duplicate.getMessage()).contains("chain_sequence_idx");
+                if (!sequenceTaken || attempt >= 50) throw duplicate;
+            }
         }
     }
 
@@ -119,7 +159,22 @@ public class LogRepositoryImpl implements LogRepository {
 
     @Override
     public long deleteOlderThan(LocalDateTime cutoff) {
-        return mongoTemplate.remove(new Query(Criteria.where("timestamp").lt(cutoff)), LogEntity.class).getDeletedCount();
+        // Chỉ cắt phần đầu liền mạch của chuỗi hash: event đến trễ có timestamp cũ nhưng sequence mới, xóa nó sẽ để lại
+        // lỗ giữa chuỗi và bị báo nhầm là mất bản ghi. Bản đó được dọn ở lần sau, khi đầu chuỗi đã qua nó.
+        // Hết hạn cả chuỗi thì vẫn giữ bản cuối làm đầu chuỗi, để sequence và hash nối tiếp chứ không bắt lại từ 1.
+        LogEntity firstKept = mongoTemplate.findOne(new Query(Criteria.where("sequence").exists(true)
+                .and("timestamp").gte(cutoff)).with(Sort.by(Sort.Direction.ASC, "sequence")).limit(1), LogEntity.class);
+        if (firstKept == null) {
+            firstKept = mongoTemplate.findOne(new Query(Criteria.where("sequence").exists(true))
+                    .with(Sort.by(Sort.Direction.DESC, "sequence")).limit(1), LogEntity.class);
+        }
+        Criteria outsideChain = Criteria.where("sequence").exists(false);
+        Criteria chainPrefix = firstKept == null
+                ? outsideChain
+                : Criteria.where("sequence").lt(firstKept.getSequence());
+        Query expired = new Query(new Criteria().andOperator(
+                Criteria.where("timestamp").lt(cutoff), new Criteria().orOperator(outsideChain, chainPrefix)));
+        return mongoTemplate.remove(expired, LogEntity.class).getDeletedCount();
     }
 
     /** Một document mỗi tài khoản (_id = tài khoản): lần xử lý gần nhất. */

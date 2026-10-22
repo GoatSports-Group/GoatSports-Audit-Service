@@ -2,6 +2,7 @@ package iuh.fit.auditservice.application.service.impl;
 
 import iuh.fit.auditservice.application.dto.PageFilter;
 import iuh.fit.auditservice.application.dto.response.base.PageResult;
+import iuh.fit.auditservice.application.dto.response.log.ChainVerificationResponseCommand;
 import iuh.fit.auditservice.application.dto.response.log.FailedLoginBurstResponseCommand;
 import iuh.fit.auditservice.application.dto.response.log.LogStatsResponseCommand;
 import iuh.fit.auditservice.application.exception.ServiceException;
@@ -83,6 +84,11 @@ public class LogServiceImpl implements LogService {
     @Override
     public long purgeExpired() {
         return logRepository.deleteOlderThan(LocalDateTime.now(clock).minusDays(retentionDays));
+    }
+
+    @Override
+    public ChainVerificationResponseCommand verifyChain() {
+        return logRepository.verifyChain();
     }
 
     @Override

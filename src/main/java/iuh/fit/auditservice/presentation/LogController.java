@@ -3,6 +3,7 @@ package iuh.fit.auditservice.presentation;
 import iuh.fit.auditservice.application.dto.PageFilter;
 import iuh.fit.auditservice.application.dto.response.base.BaseListResponse;
 import iuh.fit.auditservice.application.dto.response.base.PageResult;
+import iuh.fit.auditservice.application.dto.response.log.ChainVerificationResponseCommand;
 import iuh.fit.auditservice.application.dto.response.log.FailedLoginBurstResponseCommand;
 import iuh.fit.auditservice.application.dto.response.log.LogResponseCommand;
 import iuh.fit.auditservice.application.dto.response.log.LogStatsResponseCommand;
@@ -48,6 +49,13 @@ public class LogController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to
     ) throws ServiceException {
         return ResponseEntity.ok(logService.getStats(from, to));
+    }
+
+    /** Đi lại chuỗi hash nhật ký; {@code intact = false} kèm vị trí và lý do chỗ hỏng đầu tiên. */
+    @GetMapping("/integrity")
+    @PreAuthorize("hasAuthority('GET_LOGS')")
+    public ChainVerificationResponseCommand verifyIntegrity() {
+        return logService.verifyChain();
     }
 
     /** Tài khoản đăng nhập thất bại liên tục trong cửa sổ theo dõi (mặc định 5 lần / 15 phút). */
