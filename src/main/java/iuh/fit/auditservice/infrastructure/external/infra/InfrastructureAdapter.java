@@ -16,12 +16,14 @@ import org.apache.kafka.common.TopicPartition;
 import org.bson.Document;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -170,11 +172,11 @@ public class InfrastructureAdapter implements InfrastructurePort {
 
     private synchronized void resetAdmin() {
         if (admin == null) return;
-        admin.close(java.time.Duration.ofSeconds(1));
+        admin.close(Duration.ofSeconds(1));
         admin = null;
     }
 
-    private static Socket connect(String host, int port) throws java.io.IOException {
+    private static Socket connect(String host, int port) throws IOException {
         Socket socket = new Socket();
         socket.connect(new InetSocketAddress(host, port), TIMEOUT_MS);
         socket.setSoTimeout(TIMEOUT_MS);
@@ -190,7 +192,7 @@ public class InfrastructureAdapter implements InfrastructurePort {
         return command.toString().getBytes(StandardCharsets.UTF_8);
     }
 
-    private static String readLine(InputStream in) throws java.io.IOException {
+    private static String readLine(InputStream in) throws IOException {
         StringBuilder line = new StringBuilder();
         int next;
         while ((next = in.read()) != -1 && next != '\n') {

@@ -21,6 +21,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -126,7 +127,7 @@ public class SystemHealthServiceImpl implements SystemHealthService {
         // Prometheus không trả lời thì không biết gì về dịch vụ: giữ nguyên sự cố, không mở / đóng nhầm.
         if (!health.metricsAvailable()) return;
         Instant now = clock.instant();
-        Map<String, Incident> open = new java.util.HashMap<>();
+        Map<String, Incident> open = new HashMap<>();
         incidents.findOpen().forEach(incident -> open.put(incident.getService(), incident));
 
         for (ServiceHealthResponseCommand service : health.services()) {

@@ -1,6 +1,7 @@
 package iuh.fit.auditservice.application.service.impl;
 
 import iuh.fit.auditservice.application.dto.response.log.FailedLoginBurstResponseCommand;
+import iuh.fit.auditservice.application.dto.response.system.TrendResponseCommand;
 import iuh.fit.auditservice.application.exception.ServiceException;
 import iuh.fit.auditservice.application.port.monitoring.MetricsQueryPort;
 import iuh.fit.auditservice.application.port.notification.AlertPort;
@@ -8,6 +9,7 @@ import iuh.fit.auditservice.application.port.persistence.IncidentRepository;
 import iuh.fit.auditservice.application.port.persistence.LogRepository;
 import iuh.fit.auditservice.domain.Incident;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -122,7 +124,7 @@ class MonitoringFeaturesTest {
     void trendsAcceptOnlyOneHourOrOneDayAndAlignToTheStep() throws ServiceException {
         clock.now = Instant.parse("2026-10-14T03:07:42Z");
 
-        var trend = service.getTrends("24h");
+        TrendResponseCommand trend = service.getTrends("24h");
 
         assertThat(trend.stepSeconds()).isEqualTo(900);
         assertThat(trend.start()).isEqualTo(Instant.parse("2026-10-13T03:00:00Z"));
@@ -169,7 +171,7 @@ class MonitoringFeaturesTest {
         assertThat(logs.getFailedLoginBursts()).hasSize(1);
 
         logs.resolveFailedLogins(" attacker@x.vn ", "admin-1");
-        verify(repository).resolveFailedLogins(org.mockito.ArgumentMatchers.eq("attacker@x.vn"), any(), org.mockito.ArgumentMatchers.eq("admin-1"));
-        verify(repository).save(org.mockito.ArgumentMatchers.argThat(log -> "RESOLVE_FAILED_LOGIN_ALERT".equals(log.getAction())));
+        verify(repository).resolveFailedLogins(ArgumentMatchers.eq("attacker@x.vn"), any(), ArgumentMatchers.eq("admin-1"));
+        verify(repository).save(ArgumentMatchers.argThat(log -> "RESOLVE_FAILED_LOGIN_ALERT".equals(log.getAction())));
     }
 }

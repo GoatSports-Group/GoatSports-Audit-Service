@@ -2,10 +2,14 @@ package iuh.fit.auditservice.application.port.persistence;
 
 import iuh.fit.auditservice.application.dto.PageFilter;
 import iuh.fit.auditservice.application.dto.response.base.PageResult;
+import iuh.fit.auditservice.application.dto.response.log.FailedLoginBurstResponseCommand;
 import iuh.fit.auditservice.application.dto.response.log.LogStatsResponseCommand;
 import iuh.fit.auditservice.domain.Log;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 public interface LogRepository {
     void save(Log log);
@@ -29,9 +33,9 @@ public interface LogRepository {
     void resolveFailedLogins(String account, LocalDateTime at, String resolvedBy);
 
     /** Lần xử lý gần nhất của từng tài khoản (không có thì không nằm trong map). */
-    java.util.Map<String, LocalDateTime> failedLoginResolutions(java.util.Collection<String> accounts);
+    Map<String, LocalDateTime> failedLoginResolutions(Collection<String> accounts);
 
     /** Tài khoản có ít nhất {@code threshold} lần LOGIN lỗi (4xx/5xx) từ {@code since}, nhiều lần nhất trước. */
-    java.util.List<iuh.fit.auditservice.application.dto.response.log.FailedLoginBurstResponseCommand> failedLoginBursts(
+    List<FailedLoginBurstResponseCommand> failedLoginBursts(
             LocalDateTime since, int threshold);
 }

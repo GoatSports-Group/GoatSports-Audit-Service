@@ -1,5 +1,6 @@
 package iuh.fit.auditservice.application.mapper;
 
+import iuh.fit.auditservice.application.dto.response.log.LogResponseCommand;
 import iuh.fit.auditservice.domain.AuditContext;
 import iuh.fit.auditservice.domain.Log;
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,7 @@ class LogMapperTest {
                 .context(AuditContext.builder().httpMethod("POST").requestUri("/api/v1/x").userAgent("Firefox").build())
                 .build();
 
-        var command = new LogMapperImpl().toCommand(log);
+        LogResponseCommand command = new LogMapperImpl().toCommand(log);
 
         assertThat(command.sourceService()).isEqualTo("payment-service");
         assertThat(command.resourceId()).isEqualTo("b-1");

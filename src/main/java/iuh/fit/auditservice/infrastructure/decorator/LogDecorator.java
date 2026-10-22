@@ -2,6 +2,7 @@ package iuh.fit.auditservice.infrastructure.decorator;
 
 import iuh.fit.auditservice.application.dto.PageFilter;
 import iuh.fit.auditservice.application.dto.response.base.PageResult;
+import iuh.fit.auditservice.application.dto.response.log.FailedLoginBurstResponseCommand;
 import iuh.fit.auditservice.application.service.LogService;
 import iuh.fit.auditservice.application.service.impl.LogServiceImpl;
 import iuh.fit.auditservice.application.dto.response.log.LogStatsResponseCommand;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +30,7 @@ public class LogDecorator implements LogService {
     }
 
     @Override
-    public java.util.List<iuh.fit.auditservice.application.dto.response.log.FailedLoginBurstResponseCommand> getFailedLoginBursts() {
+    public List<FailedLoginBurstResponseCommand> getFailedLoginBursts() {
         return logServiceImpl.getFailedLoginBursts();
     }
 

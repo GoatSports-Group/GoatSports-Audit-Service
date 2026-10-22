@@ -12,6 +12,7 @@ import iuh.fit.auditservice.infrastructure.persistence.mapper.LogEntityMapper;
 import iuh.fit.auditservice.infrastructure.persistence.repository.converter.MongoCriteriaConverter;
 import iuh.fit.auditservice.infrastructure.persistence.repository.jpa.JpaLogRepository;
 import lombok.RequiredArgsConstructor;
+import org.bson.Document;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -20,11 +21,19 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
@@ -99,7 +108,7 @@ public class LogRepositoryImpl implements LogRepository {
                 .filter(StringUtils::hasText).sorted().toList();
         long users = mongoTemplate.findDistinct(new Query(range), "userId", LogEntity.class, String.class).stream()
                 .filter(id -> StringUtils.hasText(id) && !"anonymous".equalsIgnoreCase(id)).count();
-        List<Long> hourly = new java.util.ArrayList<>(hours);
+        List<Long> hourly = new ArrayList<>(hours);
         for (int hour = 0; hour < hours; hour++) {
             LocalDateTime start = from.plusHours(hour);
             LocalDateTime end = start.plusHours(1).isBefore(to) ? start.plusHours(1) : to;
@@ -119,16 +128,16 @@ public class LogRepositoryImpl implements LogRepository {
     @Override
     public void resolveFailedLogins(String account, LocalDateTime at, String resolvedBy) {
         mongoTemplate.upsert(new Query(Criteria.where("_id").is(account)),
-                new org.springframework.data.mongodb.core.query.Update().set("resolvedAt", at).set("resolvedBy", resolvedBy),
+                new Update().set("resolvedAt", at).set("resolvedBy", resolvedBy),
                 RESOLUTIONS);
     }
 
     @Override
-    public java.util.Map<String, LocalDateTime> failedLoginResolutions(java.util.Collection<String> accounts) {
-        java.util.Map<String, LocalDateTime> result = new java.util.HashMap<>();
-        mongoTemplate.find(new Query(Criteria.where("_id").in(accounts)), org.bson.Document.class, RESOLUTIONS)
+    public Map<String, LocalDateTime> failedLoginResolutions(Collection<String> accounts) {
+        Map<String, LocalDateTime> result = new HashMap<>();
+        mongoTemplate.find(new Query(Criteria.where("_id").in(accounts)), Document.class, RESOLUTIONS)
                 .forEach(row -> result.put(row.getString("_id"), toLocal(row.get("resolvedAt"))));
-        result.values().removeIf(java.util.Objects::isNull);
+        result.values().removeIf(Objects::isNull);
         return result;
     }
 
@@ -142,7 +151,7 @@ public class LogRepositoryImpl implements LogRepository {
                 Aggregation.match(Criteria.where("attempts").gte(threshold)),
                 Aggregation.sort(Sort.Direction.DESC, "attempts"),
                 Aggregation.limit(50));
-        return mongoTemplate.aggregate(aggregation, LogEntity.class, org.bson.Document.class).getMappedResults().stream()
+        return mongoTemplate.aggregate(aggregation, LogEntity.class, Document.class).getMappedResults().stream()
                 .map(row -> new FailedLoginBurstResponseCommand(
                         String.valueOf(row.get("_id")),
                         ((Number) row.get("attempts")).longValue(),
@@ -154,8 +163,8 @@ public class LogRepositoryImpl implements LogRepository {
 
     /** Mongo trả Date (UTC) cho trường LocalDateTime; đổi lại giờ máy chủ như lúc ghi. */
     private static LocalDateTime toLocal(Object value) {
-        return value instanceof java.util.Date date
-                ? LocalDateTime.ofInstant(date.toInstant(), java.time.ZoneId.systemDefault()) : null;
+        return value instanceof Date date
+                ? LocalDateTime.ofInstant(date.toInstant(), ZoneId.systemDefault()) : null;
     }
 
     private long countStatus(LocalDateTime from, LocalDateTime to, int min, int maxExclusive) {

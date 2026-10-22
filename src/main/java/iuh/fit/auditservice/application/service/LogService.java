@@ -2,11 +2,13 @@ package iuh.fit.auditservice.application.service;
 
 import iuh.fit.auditservice.application.dto.PageFilter;
 import iuh.fit.auditservice.application.dto.response.base.PageResult;
+import iuh.fit.auditservice.application.dto.response.log.FailedLoginBurstResponseCommand;
 import iuh.fit.auditservice.application.dto.response.log.LogStatsResponseCommand;
 import iuh.fit.auditservice.application.exception.ServiceException;
 import iuh.fit.auditservice.domain.Log;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public interface LogService {
     PageResult<Log> getAllLogs(PageFilter filter);
@@ -15,13 +17,13 @@ public interface LogService {
     LogStatsResponseCommand getStats(LocalDateTime from, LocalDateTime to) throws ServiceException;
 
     /** Tài khoản đăng nhập thất bại liên tục trong cửa sổ theo dõi hiện tại. */
-    java.util.List<iuh.fit.auditservice.application.dto.response.log.FailedLoginBurstResponseCommand> getFailedLoginBursts();
+    List<FailedLoginBurstResponseCommand> getFailedLoginBursts();
 
     /**
      * Admin đánh dấu đã xử lý cảnh báo của một tài khoản: ẩn đi cho tới khi có lần đăng nhập sai mới hơn
      * (lúc đó hiện và báo lại). Thao tác được ghi vào nhật ký.
      */
-    void resolveFailedLogins(String account, String resolvedBy) throws iuh.fit.auditservice.application.exception.ServiceException;
+    void resolveFailedLogins(String account, String resolvedBy) throws ServiceException;
 
     /** Báo admin các tài khoản đăng nhập thất bại liên tục (mỗi tài khoản tối đa một lần mỗi cửa sổ). */
     void alertFailedLogins();

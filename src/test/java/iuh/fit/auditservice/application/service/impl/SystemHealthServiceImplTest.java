@@ -7,6 +7,7 @@ import iuh.fit.auditservice.application.port.monitoring.MetricsQueryPort;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -34,7 +35,7 @@ class SystemHealthServiceImplTest {
         }
 
         @Override
-        public Map<String, List<Double>> rangeByService(String promQl, Instant start, Instant end, java.time.Duration step) {
+        public Map<String, List<Double>> rangeByService(String promQl, Instant start, Instant end, Duration step) {
             queries.add(promQl);
             return Map.of();
         }
